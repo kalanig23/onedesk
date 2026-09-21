@@ -121,3 +121,18 @@ test("a task can only be assigned to someone on the project", async () => {
   assert.equal(good.status, 200);
   assert.equal(good.data.assigneeId, anjali.id);
 });
+
+test("the log-time menu lists only projects the person is on", async () => {
+  const mine = await call("GET", "/time-entries/options", undefined, anjali.id);
+  assert.equal(mine.status, 200);
+  assert.ok(mine.data.some((p) => p.id === project.id));
+
+  const theirs = await call("GET", "/time-entries/options", undefined, outsider.id);
+  assert.equal(theirs.status, 200);
+  assert.ok(!theirs.data.some((p) => p.id === project.id));
+});
+
+test("the log-time menu needs a signed-in person", async () => {
+  const r = await call("GET", "/time-entries/options");
+  assert.equal(r.status, 401);
+});

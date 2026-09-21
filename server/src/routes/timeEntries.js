@@ -21,4 +21,18 @@ router.get("/mine", async (req, res) => {
   res.json(entries);
 });
 
+// Log-time dropdown ke liye: jin active projects par ye banda hai, unke tasks
+router.get("/options", async (req, res) => {
+  if (!req.userId) throw new AppError("Choose who you are from the user menu first.", 401, "NOT_SIGNED_IN");
+  const projects = await prisma.project.findMany({
+    where: { status: "active", members: { some: { userId: req.userId } } },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      tasks: { orderBy: { id: "asc" }, select: { id: true, title: true } },
+    },
+  });
+  res.json(projects);
+});
 module.exports = router;

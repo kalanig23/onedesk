@@ -68,3 +68,29 @@ th.right, td.right { text-align: right; }
   .hero .big { font-size: 2rem; }
   header { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+nav { display: flex; gap: 16px; align-items: center; }
+nav a { color: var(--text); }
+
+.form {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; display: grid; gap: 14px; max-width: 520px;
+}
+.field label { display: block; margin: 0 0 4px; }
+.field select, .field input[type="date"], .field input[type="number"], .field input[type="text"] {
+  width: 100%; padding: 10px; font-size: 1rem;
+}
+.field.check { display: flex; align-items: center; gap: 8px; }
+.field.check label { margin: 0; color: var(--text); }
+.quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.quick button {
+  padding: 8px 16px; font-size: 1rem; border: 1px solid var(--border);
+  background: #fff; border-radius: 6px; cursor: pointer;
+}
+.quick button[aria-pressed="true"] { background: var(--text); color: #fff; }
+.primary {
+  padding: 12px 18px; font-size: 1.05rem; font-weight: 600;
+  background: var(--text); color: #fff; border: 0; border-radius: 6px; cursor: pointer;
+}
+.primary:disabled { opacity: 0.6; cursor: wait; }
+.success { color: var(--ok); background: #e8f5ee; border: 1px solid #b7e0c8; padding: 10px; border-radius: 6px; }
