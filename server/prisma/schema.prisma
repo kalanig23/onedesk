@@ -7,10 +7,131 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Fake login: seeded users ke beech dropdown se switch karenge
 model User {
   id         Int    @id @default(autoincrement())
   name       String
   email      String @unique
-  role       String @default("member")
-  hourlyRate Int
+  role       String @default("member") // sales | manager | member
+  hourlyRate Int // abhi ka default rate (rupees/hour)
+
+  ownedDeals      Deal[]
+  stageChanges    DealStageChange[]
+  managedProjects Project[]
+  memberships     ProjectMember[]
+  tasks           Task[]
+  timeEntries     TimeEntry[]
+}
+
+model Account {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  industry   String?
+  isArchived Boolean  @default(false) // delete ki jagah archive
+  createdAt  DateTime @default(now())
+
+  contacts Contact[]
+  deals    Deal[]
+  projects Project[]
+}
+
+model Contact {
+  id        Int     @id @default(autoincrement())
+  accountId Int
+  name      String
+  email     String
+  phone     String?
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+}
+
+model Deal {
+  id                Int      @id @default(autoincrement())
+  accountId         Int
+  title             String
+  stage             String   @default("new") // new | qualified | proposal_sent | won | lost
+  expectedValue     Int // rupees (Int, kyunki Float mein paise ka hisaab galat ho sakta hai)
+  expectedDays      Float // sold days
+  expectedCloseDate DateTime
+  lostReason        String?
+  ownerId           Int?
+  version           Int      @default(1) // optimistic locking: do log ek saath edit karein to conflict pakad sakein
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  account Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  owner   User?             @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  project Project?
+  history DealStageChange[]
+}
+
+// Stage history: kisne, kab, kahan se kahan move kiya
+model DealStageChange {
+  id          Int      @id @default(autoincrement())
+  dealId      Int
+  fromStage   String
+  toStage     String
+  changedById Int?
+  changedAt   DateTime @default(now())
+
+  deal      Deal  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  changedBy User? @relation(fields: [changedById], references: [id], onDelete: SetNull)
+}
+
+model Project {
+  id           Int      @id @default(autoincrement())
+  dealId       Int      @unique // ek deal = ek project (database khud double conversion rokta hai)
+  accountId    Int
+  name         String
+  managerId    Int?
+  status       String   @default("active") // active | closed
+  budgetDays   Float // deal se COPY kiya hua sold scope
+  budgetAmount Int // deal se COPY kiya hua sold scope
+  createdAt    DateTime @default(now())
+
+  deal    Deal            @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  account Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  manager User?           @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  members ProjectMember[]
+  tasks   Task[]
+}
+
+model ProjectMember {
+  projectId Int
+  userId    Int
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, userId])
+}
+
+model Task {
+  id         Int    @id @default(autoincrement())
+  projectId  Int
+  title      String
+  assigneeId Int?
+  status     String @default("todo") // todo | in_progress | done
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee    User?       @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  timeEntries TimeEntry[]
+}
+
+model TimeEntry {
+  id          Int      @id @default(autoincrement())
+  taskId      Int
+  userId      Int
+  date        DateTime
+  hours       Float
+  billable    Boolean  @default(true)
+  note        String?
+  rateAtEntry Int // us din ka rate, freeze. Rate badhe to purani entries nahi badlengi
+  createdAt   DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, billable])
+  @@index([userId, date])
 }
