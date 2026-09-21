@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { api, getUserId, setUserId } from "./api";
+import { STATUS } from "./status";
+import ProjectDetail from "./ProjectDetail";
 
-const STATUS = {
-  ok: { icon: "✓", label: "On track" },
-  warning: { icon: "!", label: "Near limit" },
-  over: { icon: "▲", label: "Over budget" },
-};
+function useHash() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onChange = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return hash;
+}
 
 function UserPicker() {
   const [users, setUsers] = useState([]);
@@ -51,14 +57,14 @@ function ProjectList() {
         const s = STATUS[p.budget.status];
         const pct = Math.max(p.budget.percentDays, p.budget.percentAmount);
         return (
-          <button key={p.id} className="card">
+          <a key={p.id} href={`#/projects/${p.id}`} className="card">
             <h3>{p.name}</h3>
             <p className="muted">{p.account.name}</p>
             <p>
               <span className={`badge ${p.budget.status}`}>{s.icon} {s.label}</span>{" "}
               {pct}% used
             </p>
-          </button>
+          </a>
         );
       })}
     </div>
@@ -66,15 +72,24 @@ function ProjectList() {
 }
 
 export default function App() {
+  const hash = useHash();
+  const match = hash.match(/^#\/projects\/(\d+)$/);
+
   return (
     <>
       <header>
-        <h1>OneDesk</h1>
+        <h1><a href="#/" className="home">OneDesk</a></h1>
         <UserPicker />
       </header>
       <main>
-        <h2>Projects</h2>
-        <ProjectList />
+        {match ? (
+          <ProjectDetail id={match[1]} />
+        ) : (
+          <>
+            <h2>Projects</h2>
+            <ProjectList />
+          </>
+        )}
       </main>
     </>
   );
