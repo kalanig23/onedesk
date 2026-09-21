@@ -18,6 +18,10 @@ function errorHandler(err, req, res, next) {
     return send(res, 400, "BAD_REFERENCE", "One of the linked records does not exist.");
   }
 
+  if (err.code === "P2034") {
+    return send(res, 409, "TRY_AGAIN", "Another change happened at the same moment. Please try again.");
+  }
+
   // Developer ke liye poora error terminal mein, user ko sirf saaf message
   console.error(err);
   send(res, 500, "SERVER_ERROR", "Something went wrong on our side. Please try again.");
