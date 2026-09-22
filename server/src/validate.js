@@ -44,4 +44,14 @@ function requireId(value, label) {
   return n;
 }
 
-module.exports = { requireText, requireEmail, requirePositiveNumber, requirePositiveInt, requireDate, requireId };
+function requireHourlyRate(value) {
+  const n = typeof value === "string" && value.trim() === "" ? NaN : Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > 100000) {
+    throw new AppError("Hourly rate must be a whole number from 0 to 100000 (₹ per hour).");
+  }
+  return n;
+}
+
+module.exports = {
+  requireText, requireEmail, requirePositiveNumber, requirePositiveInt, requireDate, requireId, requireHourlyRate,
+};

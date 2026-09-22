@@ -29,9 +29,9 @@ test("a deal can be lost from any open stage", () => {
   }
 });
 
-test("Won and Lost deals cannot be moved again", () => {
+test("Won deals cannot be moved again, but Lost can come back as New", () => {
   rejects(() => validateStageChange("won", "lost", "changed mind"), /already Won/);
-  rejects(() => validateStageChange("lost", "new"), /already Lost/);
+  validateStageChange("lost", "new");
 });
 
 test("unknown stages and same-stage moves are rejected", () => {

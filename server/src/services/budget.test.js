@@ -57,4 +57,31 @@ test("no time entries gives zeros and ok status", () => {
   assert.equal(r.burnedDays, 0);
   assert.equal(r.burnedAmount, 0);
   assert.equal(r.status, "ok");
+  assert.equal(r.overrunOn, null);
+});
+
+test("overrun date is the day burned days first pass what was sold", () => {
+  const { firstOverrunDate } = require("./budget");
+  const when = firstOverrunDate(
+    { budgetDays: 2 },
+    [
+      { id: 1, hours: 8, date: "2026-09-01" },
+      { id: 2, hours: 8, date: "2026-09-02" },
+      { id: 3, hours: 8, date: "2026-09-10" },
+    ],
+  );
+  assert.equal(when, "2026-09-10");
+});
+
+test("draft invoice splits billable hours by person", () => {
+  const { draftInvoice } = require("./budget");
+  const inv = draftInvoice([
+    { hours: 8, billable: true, rateAtEntry: 2000, user: { name: "Anjali Rao" } },
+    { hours: 2, billable: false, rateAtEntry: 2000, user: { name: "Anjali Rao" } },
+    { hours: 8, billable: true, rateAtEntry: 1500, user: { name: "Karan Shah" } },
+  ]);
+  assert.equal(inv.billableHours, 16);
+  assert.equal(inv.amount, 28000);
+  assert.equal(inv.lines.find((l) => l.person === "Anjali Rao").hours, 10);
+  assert.equal(inv.lines.find((l) => l.person === "Anjali Rao").billableHours, 8);
 });

@@ -29,7 +29,6 @@ cd server
 cp .env.example .env          # DATABASE_URL uses the same password as above
 npm install
 npx prisma migrate dev
-npm run seed
 npm run dev                   # http://localhost:4000
 
 # 3. Frontend (new terminal)
@@ -38,8 +37,7 @@ npm install
 npm run dev                   # http://localhost:5173
 ```
 
-Open http://localhost:5173 and choose a person from the "I am" dropdown
-(this is the fake login — no real auth was built, as allowed by the brief).
+Open http://localhost:5173 and register. The first account can be **Admin**. Later people pick sales, manager or member and enter their own hourly rate (₹/hour). Nothing is seeded — accounts, deals and projects are created in the app.
 
 ## Tests
 
@@ -62,7 +60,12 @@ Covers the budget calculation, deal stage rules, the deal→project conversion
 
 ## Tier 2: Pipeline forecast
 
-[to be added]
+Sales (role `sales`) sees Accounts, Deals and **This quarter**: a weighted
+forecast of what is likely to close, who was last spoken to, proposal line
+items (days × daily rate), and deals that went quiet for four months.
+Delivery (`manager` / `member`) sees Projects and Log time only — the
+timesheet and budget tools Ravi’s team uses after a deal is Won.
+
 
 ## Failure cases I handled end to end
 
@@ -88,8 +91,8 @@ bad hours would poison the "we never want to be surprised again" number.
   scale; at 2 million rows this needs a SQL-side SUM/GROUP BY (see A3 Q5).
 - Concurrent time-logging uses a Serializable transaction but isn't covered
   by an automated concurrency test.
-- No role-based permissions beyond the fake-login dropdown, as the brief
-  allows.
+- Login and registration exist. Nav is split by role: sales sees the
+  pipeline, delivery sees projects and time.
 - 1 day = 8 hours is my own assumption for the days-based budget view.
 
 ## AI use

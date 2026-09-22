@@ -6,7 +6,7 @@ const ALLOWED = {
   qualified: ["proposal_sent", "lost"],
   proposal_sent: ["won", "lost"],
   won: [],
-  lost: [],
+  lost: ["new"], // four months quiet, then they come back
 };
 
 const LABELS = {

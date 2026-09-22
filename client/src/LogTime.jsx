@@ -29,6 +29,7 @@ export default function LogTime() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -71,7 +72,7 @@ export default function LogTime() {
     return (
       <>
         <h2>Log time</h2>
-        <p className="error" role="alert">Choose who you are from the menu at the top first.</p>
+        <p className="error" role="alert">Please log in first.</p>
       </>
     );
   }
@@ -81,7 +82,7 @@ export default function LogTime() {
     return (
       <>
         <h2>Log time</h2>
-        <p className="muted">You are not on any active project yet. Ask your manager to add you to one.</p>
+        <p className="muted">No tasks are assigned to you yet. Ask your manager to assign a task, then you can log hours here.</p>
       </>
     );
   }
@@ -93,6 +94,7 @@ export default function LogTime() {
   return (
     <>
       <h2>Log time</h2>
+      <p className="muted">Hours go on the task assigned to you. The whole team sees progress on the project.</p>
       <form className="form" onSubmit={submit} noValidate>
         <div className="field">
           <label htmlFor="task">Task</label>
@@ -157,16 +159,74 @@ export default function LogTime() {
         <div className="scroll">
           <table>
             <thead>
-              <tr><th>Date</th><th>Task</th><th>Project</th><th className="right">Hours</th><th>Type</th></tr>
+              <tr><th>Date</th><th>Task</th><th>Project</th><th className="right">Hours</th><th>Type</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {entries.slice(0, 10).map((x) => (
                 <tr key={x.id}>
-                  <td>{x.date.slice(0, 10)}</td>
-                  <td>{x.task.title}</td>
-                  <td>{x.task.project.name}</td>
-                  <td className="right">{num(x.hours)}h</td>
-                  <td>{x.billable ? "Billable" : "Non-billable"}</td>
+                  {editing?.id === x.id ? (
+                    <>
+                      <td><input type="date" value={editing.date} max={today()} onChange={(e) => setEditing({ ...editing, date: e.target.value })} /></td>
+                      <td>{x.task.title}</td>
+                      <td>{x.task.project.name}</td>
+                      <td className="right"><input type="number" step="0.25" value={editing.hours} onChange={(e) => setEditing({ ...editing, hours: e.target.value })} /></td>
+                      <td>
+                        <label>
+                          <input type="checkbox" checked={editing.billable} onChange={(e) => setEditing({ ...editing, billable: e.target.checked })} />
+                          {" "}Billable
+                        </label>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setError("");
+                            try {
+                              await api(`/time-entries/${x.id}`, {
+                                method: "PATCH",
+                                body: { date: editing.date, hours: Number(editing.hours), billable: editing.billable },
+                              });
+                              setEditing(null);
+                              setEntries(await api("/time-entries/mine"));
+                            } catch (err) {
+                              setError(err.message);
+                            }
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button type="button" onClick={() => setEditing(null)}>Cancel</button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{x.date.slice(0, 10)}</td>
+                      <td>{x.task.title}</td>
+                      <td>{x.task.project.name}</td>
+                      <td className="right">{num(x.hours)}h</td>
+                      <td>{x.billable ? "Billable" : "Non-billable"}</td>
+                      <td>
+                        <button type="button" onClick={() => setEditing({
+                          id: x.id, date: x.date.slice(0, 10), hours: x.hours, billable: x.billable,
+                        })}>Edit</button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm("Delete this time entry?")) return;
+                            setError("");
+                            try {
+                              await api(`/time-entries/${x.id}`, { method: "DELETE" });
+                              setEntries(await api("/time-entries/mine"));
+                            } catch (err) {
+                              setError(err.message);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

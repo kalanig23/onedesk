@@ -45,7 +45,59 @@ function calculateBudget(project, timeEntries) {
     percentDays: round1(percentDays),
     percentAmount: round1(percentAmount),
     status: statusFor(Math.max(percentDays, percentAmount)),
+    overrunOn: firstOverrunDate(project, timeEntries),
   };
 }
 
-module.exports = { calculateBudget, HOURS_PER_DAY };
+function dayKey(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value.slice(0, 10);
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function firstOverrunDate(project, timeEntries) {
+  const cap = Number(project.budgetDays) * HOURS_PER_DAY;
+  if (!(cap > 0)) return null;
+  const sorted = [...timeEntries].sort((a, b) => {
+    const da = new Date(a.date || 0).getTime();
+    const db = new Date(b.date || 0).getTime();
+    return da - db || (a.id || 0) - (b.id || 0);
+  });
+  let hours = 0;
+  for (const e of sorted) {
+    hours += Number(e.hours) || 0;
+    if (hours > cap) return dayKey(e.date);
+  }
+  return null;
+}
+
+function draftInvoice(timeEntries) {
+  const byPerson = new Map();
+  for (const e of timeEntries) {
+    const name = e.user?.name || "Unknown";
+    if (!byPerson.has(name)) {
+      byPerson.set(name, { person: name, hours: 0, billableHours: 0, amount: 0 });
+    }
+    const line = byPerson.get(name);
+    line.hours += Number(e.hours) || 0;
+    if (e.billable) {
+      line.billableHours += Number(e.hours) || 0;
+      line.amount += (Number(e.hours) || 0) * (Number(e.rateAtEntry) || 0);
+    }
+  }
+  const lines = [...byPerson.values()].map((l) => ({
+    ...l,
+    hours: round1(l.hours),
+    billableHours: round1(l.billableHours),
+    amount: Math.round(l.amount),
+  }));
+  return {
+    lines,
+    billableHours: round1(lines.reduce((s, l) => s + l.billableHours, 0)),
+    amount: lines.reduce((s, l) => s + l.amount, 0),
+  };
+}
+
+module.exports = { calculateBudget, firstOverrunDate, draftInvoice, HOURS_PER_DAY };

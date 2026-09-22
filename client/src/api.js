@@ -1,9 +1,27 @@
-// Fake login: kaun sa user select hai, wo yaad rakhta hai
+const KEY = "onedesk-user";
+
+export function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
 export function getUserId() {
+  const user = getUser();
+  if (user?.id) return String(user.id);
   return localStorage.getItem("userId") || "";
 }
-export function setUserId(id) {
-  localStorage.setItem("userId", id);
+
+export function setUser(user) {
+  localStorage.setItem(KEY, JSON.stringify(user));
+  localStorage.setItem("userId", String(user.id));
+}
+
+export function clearUser() {
+  localStorage.removeItem(KEY);
+  localStorage.removeItem("userId");
 }
 
 export async function api(path, { method = "GET", body } = {}) {
