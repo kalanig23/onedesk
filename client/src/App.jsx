@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api, getUserId, setUserId } from "./api";
 import { STATUS } from "./status";
 import ProjectDetail from "./ProjectDetail";
+import LogTime from "./LogTime";
+import Accounts from "./Accounts";
+import Deals from "./Deals";
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash);
@@ -24,6 +27,7 @@ function UserPicker() {
   function change(e) {
     setUserId(e.target.value);
     setValue(e.target.value);
+    window.location.reload(); // har screen naye user ke hisaab se dobara load ho
   }
 
   return (
@@ -75,22 +79,37 @@ export default function App() {
   const hash = useHash();
   const match = hash.match(/^#\/projects\/(\d+)$/);
 
+  let page;
+  if (match) {
+    page = <ProjectDetail id={match[1]} />;
+  } else if (hash === "#/log") {
+    page = <LogTime />;
+  } else if (hash === "#/accounts") {
+    page = <Accounts />;
+  } else if (hash === "#/deals") {
+    page = <Deals />;
+  } else {
+    page = (
+      <>
+        <h2>Projects</h2>
+        <ProjectList />
+      </>
+    );
+  }
+
   return (
     <>
       <header>
         <h1><a href="#/" className="home">OneDesk</a></h1>
+        <nav>
+          <a href="#/">Projects</a>
+          <a href="#/log">Log time</a>
+          <a href="#/accounts">Accounts</a>
+          <a href="#/deals">Deals</a>
+        </nav>
         <UserPicker />
       </header>
-      <main>
-        {match ? (
-          <ProjectDetail id={match[1]} />
-        ) : (
-          <>
-            <h2>Projects</h2>
-            <ProjectList />
-          </>
-        )}
-      </main>
+      <main>{page}</main>
     </>
   );
 }

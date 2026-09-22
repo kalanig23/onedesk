@@ -68,3 +68,17 @@ th.right, td.right { text-align: right; }
   .hero .big { font-size: 2rem; }
   header { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+.form.inline { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; max-width: none; margin-bottom: 20px; }
+.form.inline .field { min-width: 160px; }
+
+.stage { padding: 2px 8px; border-radius: 999px; font-size: 0.85rem; border: 1px solid var(--border); }
+.stage.won { color: var(--ok); border-color: currentColor; }
+.stage.lost { color: var(--over); border-color: currentColor; }
+
+td button { margin: 2px 4px 2px 0; padding: 6px 10px; border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; }
+.lost-box { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+.lost-box input { padding: 6px; font-size: 0.9rem; }
+.error.small { font-size: 0.85rem; padding: 4px 8px; margin: 4px 0 0; }
+nav { display: flex; gap: 16px; align-items: center; }
+nav a { color: var(--text); }
