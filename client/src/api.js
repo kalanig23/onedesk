@@ -24,6 +24,8 @@ export function clearUser() {
   localStorage.removeItem("userId");
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 export async function api(path, { method = "GET", body } = {}) {
   const headers = { "Content-Type": "application/json" };
   const userId = getUserId();
@@ -31,7 +33,7 @@ export async function api(path, { method = "GET", body } = {}) {
 
   let res;
   try {
-    res = await fetch("/api" + path, {
+    res = await fetch(API_BASE + "/api" + path, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
