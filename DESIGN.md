@@ -5,15 +5,30 @@
 ```mermaid
 flowchart LR
   Browser["React (Vite)\nhash routes"] -- "fetch VITE_API_URL + /api/...\n(x-user-id header)" --> Server["Express API"]
-  Server -- "Prisma" --> DB[("PostgreSQL")]
+  Server -- "Prisma DATABASE_URL" --> Neon[("PostgreSQL on Neon\nneondb")]
+  Server -. "or local docker compose" .-> LocalDB[("Postgres 16")]
   Server -. "SMTP_HOST set" .-> Mail["SMTP server"]
-  Server -- "SMTP_HOST unset:\nrow saved as via=outbox" --> DB
+  Server -- "SMTP_HOST unset:\nrow saved as via=outbox" --> Neon
 ```
 
+Prisma's `provider` is `postgresql` — Neon is hosted Postgres, not a
+different dialect. The live tables are in Neon project
+`twilight-sunset-97887745`, database `neondb`. Locally you can instead
+point `DATABASE_URL` at `docker-compose.yml`'s Postgres 16. Neon URLs
+need `sslmode=require`.
+
 Locally Vite proxies `/api` to `http://127.0.0.1:4000`. In production the
-client must be built with `VITE_API_URL` pointing at the hosted API;
-`cors({ origin: "*" })` is on so a Vercel frontend can call a separate
-API host.
+client must be built with `VITE_API_URL` pointing at the hosted API
+(`client/src/api.js`); `cors({ origin: "*" })` is on so a Vercel frontend
+can call a separate API host.
+
+The repo is two npm packages, matching `client/package.json` and
+`server/package.json` — not a monorepo workspace. The server's production
+entry is `npm start` (`node src/index.js`); `npm run dev` is nodemon.
+Mail goes through `nodemailer` only when `SMTP_HOST` is set; otherwise
+`outbound.js` writes an `OutboundEmail` row. Passwords use `bcryptjs`.
+The client has no React Router dependency: `App.jsx` reads
+`window.location.hash`.
 
 ### How the code is split, and why
 

@@ -5,35 +5,51 @@ become a deal, a won deal becomes a project, and logged hours roll up
 against what was sold.
 
 ## Stack
-- Backend: Node.js + Express 5
-- Database: PostgreSQL (via Docker)
-- ORM: Prisma
-- Frontend: React 19 (Vite, hash routes)
-- Auth: email/password (bcrypt) + hourly rate at signup; see [Auth model](#auth-model)
-- Tests: Node's built-in test runner (`node --test`)
+
+Two separate npm packages — there is **no root `package.json`**.
+
+**`server/package.json`**
+- Runtime: Express `^5.2.1`, Prisma / `@prisma/client` `^6.19.3`, `bcryptjs`, `cors`, `dotenv`, `nodemailer`
+- Dev: `nodemon` `^3.1.14`
+- Scripts: `dev` (nodemon `src/index.js`), `start` (`node src/index.js`), `test` (`node --test`), `seed` (`node prisma/seed.js` — **wipes all tables**)
+
+**`client/package.json`**
+- Runtime: `react` / `react-dom` `^19.2.8` only (no router package — hash routes in `App.jsx`)
+- Dev: Vite `^8.3.0`, `@vitejs/plugin-react`, ESLint 10
+- Scripts: `dev`, `build`, `preview`, `lint`
+
+Auth is email/password (bcrypt) plus hourly rate at signup; see [Auth model](#auth-model).
+Postgres is **not** an npm package: Prisma talks to PostgreSQL. Hosted
+data lives on [Neon](https://console.neon.tech/app/projects/twilight-sunset-97887745/branches/br-falling-mode-aztkx39q/tables?database=neondb)
+(`neondb`). `docker-compose.yml` is only for a local Postgres 16 if you
+do not want to use Neon.
 
 ## Prerequisites
 - Node.js 20+
-- Docker Desktop
+- A Postgres URL (Neon, or Docker Desktop + `docker compose up -d db`)
 
 ## Setup (under 10 minutes)
 
-Docker Compose reads `POSTGRES_PASSWORD` from a **root** `.env`. The API
-reads `DATABASE_URL` from `server/.env`.
+The API reads `DATABASE_URL` from `server/.env`. Point it at Neon
+(Connection string from the Neon console, database `neondb`, usually
+`?sslmode=require`) or at local Docker.
 
 ```bash
 git clone https://github.com/kalanig23/onedesk.git
 cd onedesk
 
-# 1. Postgres
-echo POSTGRES_PASSWORD=onedesk > .env
-docker compose up -d db
+# 1. Postgres — pick one
+# Neon (what this project uses in prod): copy the connection string into
+# server/.env as DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require
+#
+# Or local Docker:
+# echo POSTGRES_PASSWORD=onedesk > .env
+# docker compose up -d db
+# DATABASE_URL=postgresql://onedesk:onedesk@localhost:5432/onedesk?schema=public
 
 # 2. Backend
 cd server
-cp .env.example .env
-# Set DATABASE_URL to the same user/password/db, e.g.
-# postgresql://onedesk:onedesk@localhost:5432/onedesk?schema=public
+cp .env.example .env          # then set DATABASE_URL
 npm install
 npx prisma migrate dev
 npm run dev                   # http://localhost:4000
@@ -53,14 +69,14 @@ Open http://localhost:5173 and **register**. There is no demo seed.
 - An admin can later change anyone's rate from the People page.
 
 `npm run seed` in `server/` **wipes every table**. It does not insert
-Priya/Ravi or sample deals.
+Priya/Ravi or sample deals. Production API: `npm start` (no nodemon).
+Frontend production bundle: `cd client && npm run build` (needs
+`VITE_API_URL` at build time). Local Vite proxies `/api` to
+`http://127.0.0.1:4000`.
 
 Optional SMTP: set `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` in
-`server/.env` if proposal emails should leave the machine. Otherwise each
-send is stored as `OutboundEmail` with `via: "outbox"`.
-
-Production frontend (e.g. Vercel) needs `VITE_API_URL` pointing at a
-hosted API. Local Vite proxies `/api` to `http://127.0.0.1:4000`.
+`server/.env` if `nodemailer` should actually send. Otherwise each send is
+stored as `OutboundEmail` with `via: "outbox"`.
 
 ## Tests
 
@@ -69,7 +85,7 @@ cd server
 npm test
 ```
 
-52 tests across 10 files. They cover budget math, deal stage rules, the
+52 tests across 10 files (`npm test` → `node --test` in `server/`). They cover budget math, deal stage rules, the
 deal→project conversion (double-conversion guard + optimistic lock), time
 validation (including assignee-only logging), manager vs member task
 rules, forecast/quiet-deal math, proposal emails, and the HTTP API (auth,
