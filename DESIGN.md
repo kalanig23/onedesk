@@ -4,11 +4,16 @@
 
 ```mermaid
 flowchart LR
-  Browser["React (Vite)\nlocalhost:5173"] -- "fetch /api/...\n(x-user-id header)" --> Server["Express API\nlocalhost:4000"]
-  Server -- "Prisma" --> DB[("PostgreSQL\nDocker container")]
+  Browser["React (Vite)\nhash routes"] -- "fetch VITE_API_URL + /api/...\n(x-user-id header)" --> Server["Express API"]
+  Server -- "Prisma" --> DB[("PostgreSQL")]
   Server -. "SMTP_HOST set" .-> Mail["SMTP server"]
   Server -- "SMTP_HOST unset:\nrow saved as via=outbox" --> DB
 ```
+
+Locally Vite proxies `/api` to `http://127.0.0.1:4000`. In production the
+client must be built with `VITE_API_URL` pointing at the hosted API;
+`cors({ origin: "*" })` is on so a Vercel frontend can call a separate
+API host.
 
 ### How the code is split, and why
 
@@ -45,11 +50,43 @@ decides whether a stage move is legal, whether hours are valid, or how
 budget percentages are computed — it only calls the API and displays
 whatever comes back (including error messages verbatim). The one exception
 is the client mirroring the *allowed next stages* for the deal buttons
-(`NEXT` in `Deals.jsx`) and the *allowed nav items* for a role
+(`NEXT` in `DealDetail.jsx`) and the *allowed nav items* for a role
 (`roles.js`), which are UX convenience only: the server re-validates every
 stage change independently (`dealRules.js`) and every route independently
 (`authz.js`), so a tampered or buggy client request is still safely
 rejected.
+
+Delivery has a second gate inside those routes: `canManageDelivery` (role
+`manager` or `admin`) may add members, create/assign/delete tasks, and
+close a project. A `member` may only view projects they belong to, change
+status on their own tasks, and log time when `Task.assigneeId` is them
+(`services/timeEntries.js`). Team progress (all tasks + budget) is still
+returned on `GET /projects/:id` so the whole team can see how the job is
+going.
+
+### Registration, rates, and seed
+
+Registration (`POST /api/auth/register`) requires name, email, password
+(≥ 6 chars), role, and **hourly rate** (whole rupees/hour, 0–100000). There
+is no seed file that inserts demo people: `prisma/seed.js` only deletes
+every table. The first account may register as `admin` if none exists
+(`GET /api/auth/bootstrap` → `{ allowAdmin }`); later signups are
+`sales | manager | member` only. `PATCH /api/admin/people/:id` lets an
+admin change a stored rate without touching already-frozen `rateAtEntry`
+values.
+
+### Forecast and proposals
+
+Forecast is server-side (`services/forecast.js`): “this quarter” is the
+UTC calendar quarter of `now`. Only non-lost deals whose
+`expectedCloseDate` falls in `[start, end)` are weighted (new 10%,
+qualified 35%, proposal_sent 60%, won 100%). Quiet means 120 days without
+activity on an open deal.
+
+A new deal always gets one `ProposalItem` copied from its days and value
+so sales do not type the same size twice. Extra lines are optional. The
+deal detail screen emails the proposal; a separate call follow-up stays
+on the account’s contact list.
 
 ### Where authentication actually stops
 
@@ -338,7 +375,7 @@ its own layer (see A1).
 `GET /api/projects` and `GET /api/projects/:id` both load every
 `TimeEntry` for a project (or, for the list view, every project's
 entries) into Node and reduce over them in `services/budget.js`. At
-seed/demo scale (a handful of projects, a few hundred entries each) that's
+current demo scale (a handful of projects, a few hundred entries each) that's
 simpler to read and unit-test than an equivalent SQL query, and
 `budget.test.js` can hand it a plain in-memory array — which is exactly
 the payoff of keeping this logic out of `routes/` from A1. At Brightpath's
